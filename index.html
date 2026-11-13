@@ -1,0 +1,784 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Car Works - Games</title>
+
+<style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+body {
+  background: #101116;
+  color: white;
+  font-family: Arial, sans-serif;
+}
+
+header {
+  height: 75px;
+  background: #181a22;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 6%;
+  border-bottom: 1px solid #292c38;
+}
+
+.logo {
+  font-size: 27px;
+  font-weight: 900;
+  letter-spacing: 2px;
+}
+
+.logo span {
+  color: #43caff;
+}
+
+.status {
+  color: #4cdb8c;
+  font-size: 12px;
+}
+
+.hero {
+  padding: 45px 6% 25px;
+}
+
+.hero h1 {
+  font-size: 34px;
+  margin-bottom: 10px;
+}
+
+.hero p {
+  color: #999eae;
+  margin-bottom: 25px;
+}
+
+.search {
+  width: 100%;
+  max-width: 550px;
+  padding: 15px;
+  border-radius: 9px;
+  border: 1px solid #353948;
+  background: #20232d;
+  color: white;
+  font-size: 15px;
+  outline: none;
+}
+
+.search:focus {
+  border-color: #43caff;
+}
+
+.categories {
+  display: flex;
+  gap: 10px;
+  padding: 10px 6% 25px;
+  flex-wrap: wrap;
+}
+
+.category {
+  background: #20232d;
+  color: #ccc;
+  border: 1px solid #343846;
+  padding: 10px 18px;
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+.category.active,
+.category:hover {
+  background: #43caff;
+  color: #101116;
+}
+
+.section {
+  padding: 10px 6% 60px;
+}
+
+.section h2 {
+  margin-bottom: 22px;
+}
+
+.games {
+  display: grid;
+  grid-template-columns: repeat(auto-fill,minmax(190px,1fr));
+  gap: 20px;
+}
+
+.game {
+  background: #1c1f29;
+  border: 1px solid #303442;
+  border-radius: 13px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: .2s;
+}
+
+.game:hover {
+  transform: translateY(-5px);
+  border-color: #43caff;
+}
+
+.thumbnail {
+  height: 130px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 55px;
+}
+
+.game-info {
+  padding: 15px;
+}
+
+.game-info h3 {
+  margin-bottom: 8px;
+}
+
+.game-info p {
+  font-size: 12px;
+  color: #999eae;
+}
+
+.tag {
+  display: inline-block;
+  margin-top: 12px;
+  color: #43caff;
+  font-size: 11px;
+}
+
+#player {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background: #101116;
+  padding: 15px;
+}
+
+.player-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 50px;
+}
+
+.player-top button {
+  background: #292d3a;
+  color: white;
+  border: none;
+  padding: 11px 18px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+#gameArea {
+  width: 100%;
+  height: calc(100% - 65px);
+  background: #090b12;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+canvas {
+  max-width: 100%;
+  max-height: 100%;
+  background: #080b16;
+  touch-action: none;
+}
+
+@media(max-width:600px) {
+  .games {
+    grid-template-columns: repeat(2,1fr);
+    gap: 10px;
+  }
+
+  .thumbnail {
+    height: 100px;
+  }
+
+  .hero h1 {
+    font-size: 27px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="logo">CAR <span>WORKS</span></div>
+  <div class="status">● GAME PORTAL</div>
+</header>
+
+<div class="hero">
+  <h1>Discover Games</h1>
+  <p>Find your next favorite game.</p>
+  <input class="search" id="search"
+  placeholder="Search games..."
+  oninput="filterGames()">
+</div>
+
+<div class="categories">
+  <button class="category active" onclick="setCategory('All',this)">All</button>
+  <button class="category" onclick="setCategory('Arcade',this)">Arcade</button>
+  <button class="category" onclick="setCategory('Racing',this)">Racing</button>
+  <button class="category" onclick="setCategory('Puzzle',this)">Puzzle</button>
+  <button class="category" onclick="setCategory('Skill',this)">Skill</button>
+</div>
+
+<section class="section">
+  <h2>All Games</h2>
+  <div class="games" id="games"></div>
+</section>
+
+<div id="player">
+  <div class="player-top">
+    <button onclick="closeGame()">← Back</button>
+    <h3 id="gameTitle">Game</h3>
+    <button onclick="fullscreen()">⛶ Fullscreen</button>
+  </div>
+  <div id="gameArea"></div>
+</div>
+
+<script>
+const gameList = [
+  {name:"Wave Run",emoji:"〰️",category:"Arcade",
+   color:"#35245d",description:"Fly through obstacles."},
+  {name:"Neon Racer",emoji:"🏎️",category:"Racing",
+   color:"#123e4d",description:"Avoid traffic and survive."},
+  {name:"Block Dodge",emoji:"🟪",category:"Skill",
+   color:"#492451",description:"Dodge falling blocks."},
+  {name:"Memory Grid",emoji:"🧠",category:"Puzzle",
+   color:"#204c38",description:"Remember the pattern."},
+  {name:"Reaction Test",emoji:"⚡",category:"Skill",
+   color:"#514020",description:"Test your reaction speed."}
+];
+
+let category = "All";
+
+function renderGames() {
+  const search = document.getElementById("search").value.toLowerCase();
+  const container = document.getElementById("games");
+
+  container.innerHTML = "";
+
+  gameList.forEach((game,index) => {
+    if (!game.name.toLowerCase().includes(search)) return;
+    if (category !== "All" && category !== game.category) return;
+
+    const card = document.createElement("div");
+    card.className = "game";
+
+    card.innerHTML = `
+      <div class="thumbnail" style="background:${game.color}">
+        ${game.emoji}
+      </div>
+      <div class="game-info">
+        <h3>${game.name}</h3>
+        <p>${game.description}</p>
+        <span class="tag">${game.category} · PLAY</span>
+      </div>
+    `;
+
+    card.onclick = () => openGame(index);
+    container.appendChild(card);
+  });
+}
+
+function filterGames() {
+  renderGames();
+}
+
+function setCategory(value,button) {
+  category = value;
+  document.querySelectorAll(".category").forEach(b => b.classList.remove("active"));
+  button.classList.add("active");
+  renderGames();
+}
+
+function openGame(index) {
+  document.getElementById("player").style.display = "block";
+  document.getElementById("gameTitle").textContent = gameList[index].name;
+  startGame(index);
+}
+
+function closeGame() {
+  document.getElementById("player").style.display = "none";
+  stopGame();
+}
+
+function fullscreen() {
+  const area = document.getElementById("gameArea");
+  if (area.requestFullscreen) area.requestFullscreen();
+}
+
+// GAME ENGINE
+
+let canvas,ctx,animation;
+let keys = {};
+let cleanup = null;
+
+function stopGame() {
+  cancelAnimationFrame(animation);
+  if (cleanup) cleanup();
+  cleanup = null;
+  document.getElementById("gameArea").innerHTML = "";
+}
+
+function startGame(index) {
+  stopGame();
+
+  if (index === 0) waveGame();
+  if (index === 1) racerGame();
+  if (index === 2) dodgeGame();
+  if (index === 3) memoryGame();
+  if (index === 4) reactionGame();
+}
+
+function makeCanvas() {
+  const area = document.getElementById("gameArea");
+  area.innerHTML = "";
+
+  canvas = document.createElement("canvas");
+  canvas.width = 850;
+  canvas.height = 480;
+  canvas.style.width = "min(850px,100%)";
+  canvas.style.height = "auto";
+  area.appendChild(canvas);
+
+  ctx = canvas.getContext("2d");
+  return canvas;
+}
+
+// 1. WAVE RUN
+
+function waveGame() {
+  makeCanvas();
+
+  let y = 240;
+  let vy = 0;
+  let obstacles = [];
+  let score = 0;
+  let dead = false;
+  let holding = false;
+  let frame = 0;
+
+  const down = e => {
+    if (e.code === "Space" || e.code === "ArrowUp") {
+      e.preventDefault();
+      holding = true;
+    }
+  };
+
+  const up = e => {
+    if (e.code === "Space" || e.code === "ArrowUp") holding = false;
+  };
+
+  const pointerDown = () => holding = true;
+  const pointerUp = () => holding = false;
+
+  window.addEventListener("keydown",down);
+  window.addEventListener("keyup",up);
+  canvas.addEventListener("pointerdown",pointerDown);
+  window.addEventListener("pointerup",pointerUp);
+
+  cleanup = () => {
+    window.removeEventListener("keydown",down);
+    window.removeEventListener("keyup",up);
+    canvas.removeEventListener("pointerdown",pointerDown);
+    window.removeEventListener("pointerup",pointerUp);
+  };
+
+  function loop() {
+    ctx.fillStyle = "#080b16";
+    ctx.fillRect(0,0,850,480);
+
+    ctx.strokeStyle = "#202c46";
+    for(let x=0;x<850;x+=40) {
+      ctx.beginPath();
+      ctx.moveTo(x,0);
+      ctx.lineTo(x,480);
+      ctx.stroke();
+    }
+
+    if (!dead) {
+      vy = holding ? -5 : 5;
+      y += vy;
+      frame++;
+
+      if(frame % 85 === 0) {
+        let gap = 145;
+        let top = 50 + Math.random()*210;
+        obstacles.push({x:850,top,gap});
+      }
+
+      obstacles.forEach(o => o.x -= 4);
+      obstacles = obstacles.filter(o => o.x > -60);
+
+      obstacles.forEach(o => {
+        ctx.fillStyle = "#9b4dff";
+        ctx.fillRect(o.x,0,38,o.top);
+        ctx.fillRect(o.x,o.top+o.gap,38,480);
+
+        if(o.x < 230 && o.x+38 > 200 &&
+          (y < o.top || y > o.top+o.gap)) dead = true;
+      });
+
+      if(y < 0 || y > 480) dead = true;
+
+      score++;
+    }
+
+    ctx.fillStyle = "#42d9ff";
+    ctx.beginPath();
+    ctx.moveTo(200,y);
+    ctx.lineTo(225,y-12);
+    ctx.lineTo(225,y+12);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "white";
+    ctx.font = "22px Arial";
+    ctx.fillText("Score: " + Math.floor(score/10),25,35);
+    ctx.font = "15px Arial";
+    ctx.fillText("HOLD SPACE / TAP TO FLY UP",25,460);
+
+    if(dead) {
+      ctx.font = "38px Arial";
+      ctx.fillText("GAME OVER",320,225);
+      ctx.font = "18px Arial";
+      ctx.fillText("Press R to restart",350,265);
+      if(keys.r) {
+        y=240; vy=0; obstacles=[]; score=0;
+        frame=0; dead=false; keys.r=false;
+      }
+    }
+
+    animation = requestAnimationFrame(loop);
+  }
+
+  loop();
+}
+
+// 2. NEON RACER
+
+function racerGame() {
+  makeCanvas();
+
+  let x=400;
+  let traffic=[];
+  let score=0;
+  let dead=false;
+  let frame=0;
+
+  const down = e => keys[e.key.toLowerCase()] = true;
+  const up = e => keys[e.key.toLowerCase()] = false;
+
+  window.addEventListener("keydown",down);
+  window.addEventListener("keyup",up);
+
+  cleanup = () => {
+    window.removeEventListener("keydown",down);
+    window.removeEventListener("keyup",up);
+    keys={};
+  };
+
+  function loop() {
+    ctx.fillStyle="#111827";
+    ctx.fillRect(0,0,850,480);
+
+    ctx.fillStyle="#292d39";
+    ctx.fillRect(220,0,410,480);
+
+    ctx.strokeStyle="#ffffff";
+    ctx.setLineDash([25,25]);
+    ctx.lineWidth=5;
+    ctx.beginPath();
+    ctx.moveTo(425,0);
+    ctx.lineTo(425,480);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    if(!dead) {
+      if(keys.arrowleft || keys.a) x-=6;
+      if(keys.arrowright || keys.d) x+=6;
+      x=Math.max(240,Math.min(590,x));
+
+      frame++;
+      if(frame%55===0) {
+        traffic.push({x:270+Math.random()*300,y:-60});
+      }
+
+      traffic.forEach(t => t.y+=5);
+      traffic=traffic.filter(t=>t.y<520);
+
+      traffic.forEach(t=>{
+        ctx.fillStyle="#ff465e";
+        ctx.fillRect(t.x,t.y,42,65);
+        if(Math.abs(t.x-x)<38 && Math.abs(t.y-390)<60) dead=true;
+      });
+
+      score++;
+    }
+
+    ctx.fillStyle="#40d8ff";
+    ctx.fillRect(x,385,42,65);
+
+    ctx.fillStyle="white";
+    ctx.font="22px Arial";
+    ctx.fillText("Score: "+Math.floor(score/10),25,35);
+
+    if(dead) {
+      ctx.font="40px Arial";
+      ctx.fillText("CRASH!",340,230);
+      ctx.font="18px Arial";
+      ctx.fillText("Press R to restart",350,270);
+      if(keys.r) {
+        x=400; traffic=[]; score=0; frame=0; dead=false;
+        keys.r=false;
+      }
+    }
+
+    animation=requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+// 3. BLOCK DODGE
+
+function dodgeGame() {
+  makeCanvas();
+
+  let x=400,y=410;
+  let blocks=[];
+  let score=0;
+  let dead=false;
+  let frame=0;
+
+  const down=e=>keys[e.key.toLowerCase()]=true;
+  const up=e=>keys[e.key.toLowerCase()]=false;
+  window.addEventListener("keydown",down);
+  window.addEventListener("keyup",up);
+
+  cleanup=()=>{
+    window.removeEventListener("keydown",down);
+    window.removeEventListener("keyup",up);
+    keys={};
+  };
+
+  function loop() {
+    ctx.fillStyle="#100b1d";
+    ctx.fillRect(0,0,850,480);
+
+    if(!dead) {
+      if(keys.arrowleft || keys.a) x-=6;
+      if(keys.arrowright || keys.d) x+=6;
+      x=Math.max(0,Math.min(810,x));
+
+      frame++;
+      if(frame%35===0) blocks.push({x:Math.random()*810,y:-30});
+      blocks.forEach(b=>b.y+=4);
+
+      blocks.forEach(b=>{
+        ctx.fillStyle="#bb55ff";
+        ctx.fillRect(b.x,b.y,40,30);
+        if(x<b.x+40 && x+40>b.x && y<b.y+30 && y+40>b.y) dead=true;
+      });
+
+      blocks=blocks.filter(b=>b.y<500);
+      score++;
+    }
+
+    ctx.fillStyle="#40d8ff";
+    ctx.fillRect(x,y,40,40);
+
+    ctx.fillStyle="white";
+    ctx.font="22px Arial";
+    ctx.fillText("Score: "+Math.floor(score/10),25,35);
+
+    if(dead) {
+      ctx.font="38px Arial";
+      ctx.fillText("GAME OVER",320,220);
+      ctx.font="18px Arial";
+      ctx.fillText("Press R to restart",350,260);
+      if(keys.r) {
+        x=400; blocks=[]; score=0; frame=0; dead=false;
+        keys.r=false;
+      }
+    }
+
+    animation=requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+// 4. MEMORY GRID
+
+function memoryGame() {
+  const area=document.getElementById("gameArea");
+
+  let level=1;
+  let sequence=[];
+  let input=[];
+  let busy=false;
+
+  area.innerHTML=`
+    <div style="text-align:center;width:100%;padding:20px">
+      <h1 style="margin-bottom:15px">Memory Grid</h1>
+      <p id="level" style="margin-bottom:20px">Level 1</p>
+      <div id="grid" style="
+        display:grid;
+        grid-template-columns:repeat(3,90px);
+        gap:10px;
+        justify-content:center"></div>
+      <p id="message" style="margin-top:20px">
+        Watch the pattern and repeat it!
+      </p>
+    </div>`;
+
+  const grid=document.getElementById("grid");
+
+  for(let i=0;i<9;i++) {
+    const b=document.createElement("button");
+    b.style.cssText="height:85px;background:#29334b;border:0;border-radius:10px;cursor:pointer";
+    b.onclick=()=>press(i);
+    grid.appendChild(b);
+  }
+
+  let buttons=[...grid.children];
+
+  function flash(i) {
+    buttons[i].style.background="#43caff";
+    setTimeout(()=>buttons[i].style.background="#29334b",350);
+  }
+
+  function nextLevel() {
+    busy=true;
+    input=[];
+    sequence.push(Math.floor(Math.random()*9));
+    document.getElementById("level").textContent="Level "+level;
+
+    let i=0;
+    const timer=setInterval(()=>{
+      flash(sequence[i]);
+      i++;
+      if(i>=sequence.length) {
+        clearInterval(timer);
+        busy=false;
+      }
+    },650);
+  }
+
+  function press(i) {
+    if(busy)return;
+    flash(i);
+    input.push(i);
+    let n=input.length-1;
+
+    if(input[n]!==sequence[n]) {
+      document.getElementById("message").textContent=
+        "Game over! You reached level "+level+".";
+      busy=true;
+      return;
+    }
+
+    if(input.length===sequence.length) {
+      level++;
+      document.getElementById("message").textContent="Correct! Next level...";
+      busy=true;
+      setTimeout(nextLevel,800);
+    }
+  }
+
+  const restart=document.createElement("button");
+  restart.textContent="Restart";
+  restart.style.cssText="padding:12px 25px;margin-top:15px;border:0;border-radius:8px;cursor:pointer";
+  restart.onclick=()=>{
+    level=1;sequence=[];input=[];busy=false;
+    document.getElementById("message").textContent="Watch the pattern and repeat it!";
+    nextLevel();
+  };
+  area.querySelector("div").appendChild(restart);
+
+  nextLevel();
+}
+
+// 5. REACTION TEST
+
+function reactionGame() {
+  const area=document.getElementById("gameArea");
+  let start=0;
+  let timer=null;
+  let waiting=false;
+
+  area.innerHTML=`
+    <div style="text-align:center;padding:25px">
+      <h1 style="margin-bottom:20px">Reaction Test</h1>
+      <button id="react" style="
+        width:min(300px,80vw);
+        height:190px;
+        background:#d44747;
+        color:white;
+        font-size:23px;
+        border:0;
+        border-radius:15px;
+        cursor:pointer">
+        CLICK TO START
+      </button>
+      <p id="result" style="margin-top:20px">Test your reaction speed!</p>
+    </div>`;
+
+  const button=document.getElementById("react");
+  const result=document.getElementById("result");
+
+  button.onclick=()=>{
+    if(!waiting && !timer) {
+      button.textContent="WAIT FOR GREEN...";
+      button.style.background="#b84b42";
+      waiting=true;
+
+      timer=setTimeout(()=>{
+        start=performance.now();
+        button.style.background="#24ae65";
+        button.textContent="CLICK NOW!";
+        timer=null;
+      },1000+Math.random()*3000);
+
+    } else if(waiting && timer) {
+      clearTimeout(timer);
+      timer=null;
+      waiting=false;
+      button.textContent="TOO EARLY! TRY AGAIN";
+      result.textContent="Wait for green next time.";
+    } else if(waiting) {
+      const time=Math.round(performance.now()-start);
+      waiting=false;
+      button.style.background="#d44747";
+      button.textContent="PLAY AGAIN";
+      result.textContent="Your reaction time: "+time+" ms";
+    } else {
+      button.style.background="#d44747";
+      button.textContent="CLICK TO START";
+      result.textContent="Ready?";
+    }
+  };
+
+  cleanup=()=>{
+    if(timer)clearTimeout(timer);
+  };
+}
+
+renderGames();
+</script>
+</body>
+</html>
